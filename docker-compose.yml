@@ -1,0 +1,79 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: hotel_mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: hotel_db
+      MYSQL_USER: express_user
+      MYSQL_PASSWORD: express_pass
+      MYSQL_ROOT_PASSWORD: root_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Si quieres cargar una base inicial:
+      # - ./Scripts/hotel.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_pass"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+    networks:
+      - hotel_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hotel_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: express_user
+      DB_PASSWORD: express_pass
+      DB_NAME: hotel_db
+    volumes:
+      - ./backend:/app
+    networks:
+      - hotel_network
+
+  frontend:
+    build:
+      context: ./HotelMaster
+      dockerfile: Dockerfile
+    container_name: hotel_frontend
+    restart: always
+    ports:
+      - "5173:80"
+    networks:
+      - hotel_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: hotel_phpmyadmin
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root_pass
+    depends_on:
+      - db
+    networks:
+      - hotel_network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  hotel_network:
+    driver: bridge
