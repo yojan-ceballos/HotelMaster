@@ -1,18 +1,13 @@
-# FASE 1: construir el frontend
-FROM node:22 AS build
+FROM node:22-slim
 
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm install
 
+# ⚠ El fallo era aquí: nunca copias el código antes de correr Vite
 COPY . .
-RUN npm run build
 
-# FASE 2: servir los archivos estáticos con nginx
-FROM nginx:stable
+EXPOSE 5173
 
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["npm", "run", "dev", "--", "--host"]
